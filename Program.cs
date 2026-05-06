@@ -62,6 +62,16 @@ builder.Services.AddAuthentication(
 builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
+builder.Services.AddCors(options =>
+{
+    // Development - open to all origins
+    options.AddPolicy("all", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -70,15 +80,20 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     // Enable Swagger middleware
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
+}
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
+app.UseCors("all");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
+using ( var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();  
+    db.Database.Migrate();
+}
 app.Run();
